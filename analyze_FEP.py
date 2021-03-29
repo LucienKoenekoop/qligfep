@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import argparse
 import glob
 import numpy as np
@@ -131,7 +133,10 @@ class Run(object):
         x_axis = range(0,self.lambda_sum+1)
         avg = []
         for replicate in self.failed:
-            del self.energies[replicate]
+            try:
+                del self.energies[replicate]
+            else:
+                continue
         for replicate in self.energies:
             y_axis[replicate] = [0]
             dG = 0
