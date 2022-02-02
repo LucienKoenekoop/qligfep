@@ -73,13 +73,9 @@ class Run(object):
             except:
                 print("Could not retrieve energies for: " + filename)
                 energies = [np.nan, np.nan, np.nan, np.nan, np.nan]
-                self.failed.append(replicate)
-            #try:
-            #    energies = IO.read_qfep(filename)
-            #except:
-            #    print "Could not retrieve energies for: " + filename
-            #    energies = [np.nan, np.nan, np.nan, np.nan, np.nan]
-
+                if not replicate in self.failed:
+                    self.failed.append(replicate)
+            
             for key in methods_list:
                 i += 1
                 try:
@@ -94,11 +90,11 @@ class Run(object):
             self.energies[replicate][FEP] = IO.read_qfep_verbose(filename)
         for method in methods:
             dG_array = []
-            for key in methods[method]:
+            for key in sorted(methods[method]):
                 print(method, key, methods[method][key])
                 dG_array.append(methods[method][key])
+            dG_array = [[float(i) for i in fep_stage] for fep_stage in dG_array]
             dG_array = np.array(dG_array)
-            dG_array = dG_array.astype(np.float)
             dG = f.avg_sem(dG_array)
             results[method]='{:6.2f}{:6.2f}'.format(*dG)
             
@@ -106,6 +102,7 @@ class Run(object):
             out.append(results[method])
 
         print(self.FEP, '{} {} {} {} {}'.format(*out))
+        print('crashes  {}'.format(len(self.failed)))
         
     def read_mdlog(self):
         mapping = {}
@@ -132,10 +129,14 @@ class Run(object):
         y_axis = {}
         x_axis = range(0,self.lambda_sum+1)
         avg = []
+        for replicate in self.energies:
+            for FEPstage in self.FEPstages:
+                if not FEPstage in self.energies[replicate] and not replicate in self.failed:
+                    self.failed.append(replicate)
         for replicate in self.failed:
             try:
                 del self.energies[replicate]
-            else:
+            except:
                 continue
         for replicate in self.energies:
             y_axis[replicate] = [0]
@@ -145,7 +146,7 @@ class Run(object):
                     energy = dG + energy
                     y_axis[replicate].append(energy)
                 dG+=self.energies[replicate][FEPstage][0][-1]
-        
+
         for y in y_axis:
             for i,energy in enumerate(y_axis[y]):
                 if len(avg) < self.lambda_sum + 1:
@@ -186,7 +187,8 @@ class Run(object):
             for re_file in re_files:
                 pdb_out = re_file.split('/')[-1][:-3]
                 repeat = '{:02d}'.format(int(re_file.split('/')[3]))
-                pdb_out = 'pdbs/{}_{}'.format(repeat, pdb_out)
+                fep_stage = re_file.split('/')[1]
+                pdb_out = 'pdbs/{}_{}_{}'.format(repeat, fep_stage, pdb_out)
                 outfile.write('rx {}\n'.format(re_file))
                 outfile.write('wp {}.pdb\n'.format(pdb_out))
                 outfile.write('y\n')
@@ -197,7 +199,7 @@ class Run(object):
             outfile.write('y\n')
             
             outfile.write('q\n')
-            
+
         cluster_options = getattr(s, self.cluster)
         qprep = cluster_options['QPREP']
         options = ' < re2pdb.inp > re2pdb.out'
@@ -237,7 +239,7 @@ if __name__ == "__main__":
     
     parser.add_argument('-C', '--cluster',
                         dest = "cluster",
-                        required = True,
+                        required = False,
                         help = "cluster information")
     
     

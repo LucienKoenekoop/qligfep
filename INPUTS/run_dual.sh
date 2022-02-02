@@ -3,6 +3,7 @@
 #SBATCH --nodes=NODES
 #SBATCH --ntasks-per-node=NTASKS
 #SBATCH -A ACCOUNT 
+#SBATCH -p CLUSTER-AMD
 #              d-hh:mm:ss
 #SBATCH --time=TIME
 
@@ -21,6 +22,7 @@ finalMDrestart=md_0000_1000.re
 
 workdir=/WORKDIR
 inputfiles=/INPUTFILES
+check=/STOPLIE
 length=${#fepfiles[@]}
 length=$((length-1))
 for index in $(seq 0 $length);do
@@ -36,27 +38,32 @@ rundir=$tempdir/$run
 mkdir -p $rundir
 cd $rundir
 
-cp $inputfiles/md*.inp .
 cp $inputfiles/*.top .
 cp $inputfiles/qfep.inp .
 cp $inputfiles/$fepfile .
-
-if [ $index -lt 1 ]; then
 cp $inputfiles/eq*.inp .
+
 sed -i s/SEED_VAR/"$[1 + $[RANDOM % 9999]]"/ eq1.inp
+if [ $index -lt 1 ]; then
+sed -i s/'0.000 1.000'/'1.000 0.000'/ eq*inp
+cp $inputfiles/md*_F.inp .
 else
-lastfep=FEP$index
-cp $workdir/$lastfep/$temperature/$run/$finalMDrestart $rundir/eq5.re
-fi
+sed -i s/'1.000 0.000'/'0.000 1.000'/ eq*inp
+cp $inputfiles/md*_R.inp .
+fi  
 
 sed -i s/T_VAR/"$temperature"/ *.inp
 sed -i s/FEP_VAR/"$fepfile"/ *.inp
 if [ $index -lt 1 ]; then
 echo $run
-#time srun $qdyn eq1.inp > eq1.log
-#EQ_FILES
-fi
 echo $fepfile
+#EQ_FILES
 #RUN_FILES
 timeout 30s QFEP < qfep.inp > qfep.out
+else
+echo $fepfile
+#EQ_FILES
+#RUN_FILES_R
+timeout 30s QFEP < qfep.inp > qfep.out
+fi
 done

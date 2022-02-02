@@ -288,10 +288,10 @@ def read_qfep(qfep):
             if len(line) > 1:
                 if block == 1:
                     if line[0] == '1.000000':
-                        Zwanzig_r = line[4]
+                        Zwanzig_r = float(line[4])
 
                     elif line[0] == '0.000000':
-                        Zwanzig_f = line[2]
+                        Zwanzig_f = float(line[2])
 
                         if line[5] == '-Infinity':
                             Zwanzig = np.nan
@@ -319,9 +319,13 @@ def read_qfep(qfep):
                         BAR = np.nan
                     else:
                         BAR = float(line[2])
+    try: OS
+    except: OS = np.nan
+    try: BAR
+    except: BAR = np.nan
                         
     return [Zwanzig, Zwanzig_f, Zwanzig_r, OS, BAR]
-#    return [Zwanzig, Zwanzig_f, Zwanzig_r]#, OS, BAR]
+
 def read_qfep_verbose(qfep):
     """
     Reads a given qfep.out file.

@@ -2,7 +2,7 @@
 
 import argparse
 from subprocess import check_output
-import os
+import os, sys
 import collections
 from time import gmtime, strftime
 import numpy as np
@@ -16,7 +16,7 @@ class Run(object):
     Prepare a protein for usage in spherical boundary conditions.
     """
     def __init__(self, prot, sphereradius, spherecenter, include, water, 
-                 preplocation, origin, noclean, *args, **kwargs):
+                 preplocation, origin, noclean, forcefield, *args, **kwargs):
         self.prot = prot
         self.radius = float(sphereradius)
         self.center = spherecenter
@@ -28,7 +28,7 @@ class Run(object):
         self.origin = origin
         self.original_charges = {}
         self.chains = []
-            
+        self.forcefield = forcefield
         self.log = {'INPUT':'protPREP.py -p {} -r {} -c {} -w={} -V={}'.format(prot, 
                                                                                sphereradius, 
                                                                                spherecenter, 
@@ -141,10 +141,10 @@ class Run(object):
                             else:
                                 self.original_charges[line[5]][line[6]] = \
                                 IO.charged_res[line[4]][line[2]]
-                
+
                     if write == True:
                         outfile.write(line_out + '\n')
-            
+
         elif self.origin == 'maestro':
             with open(self.prot) as infile, \
                  open(self.prot[:-4] + '_noH.pdb', 'w') as outfile:
@@ -152,8 +152,18 @@ class Run(object):
                     if line.startswith(self.include):
                         line = IO.pdb_parse_in(line)
                         if line[2][0] != 'H':
-                            outline = IO.pdb_parse_out(line)
-                            outfile.write(outline  + '\n')
+                            # Correction of capped termini by maestro
+                            if line[4] == 'NMA':
+                                outline = IO.pdb_parse_out(line)
+                                outline = f.correct_CT(outline)
+                                outfile.write(outline  + '\n')
+                            elif line[4] == 'ACE':
+                                outline = IO.pdb_parse_out(line)
+                                outline = f.correct_NT(outline)
+                                outfile.write(outline  + '\n')
+                            else:	
+                                outline = IO.pdb_parse_out(line)
+                                outfile.write(outline  + '\n')
                         
                         # Get the charges from the hydrogen connections
                         if line[4] in IO.charged_res:
@@ -166,8 +176,6 @@ class Run(object):
 
                                 else:
                                     self.original_charges[line[5]][line[6]] = IO.charged_res[line[4]][line[2]]
-
-
     
     def readpdb(self):
         i = 0
@@ -232,9 +240,11 @@ class Run(object):
                             i += 1
                             self.log['PDB2Q'][line[5]][i] = line[6]
                             self.log['QRESN'][line[5]][line[6]] = i
-                            
-        if len(self.PDB['w']) == 0:
-            del(self.PDB['w'])
+        try:                    
+            if len(self.PDB['w']) == 0:
+                del(self.PDB['w'])
+        except:
+            pass
         
     def decharge(self):
         charged_res = {'GLU':['GLH', 'CD', -1], 
@@ -280,7 +290,7 @@ class Run(object):
                     if at[6] in decharge[chain] and at[2].strip() == charged_res[at[4]]:
                         coord1 = [float(at[8]), 
                                   float(at[9]), 
-                                float(at[10])
+                                  float(at[10])
                                  ]
                         for chain2 in self.PDB:
                             for key2 in self.PDB[chain2]:
@@ -315,7 +325,7 @@ class Run(object):
                 if chain not in decharge:
                     continue
         
-                if at[6] in decharge[chain]:
+                if at[6] in decharge[chain] and at[4].strip() in charged_res.keys():
                     at[4] = charged_res[at[4]][0]
                     continue
 
@@ -378,7 +388,7 @@ class Run(object):
         cys = []
         cyx = []
         cys_bond = 2.2
-        cys_mat = []
+        cysbond_list = []
         i = 0
         k = -1
         # Reduce coordinate array
@@ -395,9 +405,9 @@ class Run(object):
                     if SG_1 == SG_2:
                         continue
                     else:
-                         overlap = f.euclidian_overlap(SG_1[1], SG_2[1], cys_bond)
-                            if overlap:
-                                if SG_1[0] != SG_2[0]:
+                        overlap = f.euclidian_overlap(SG_1[1], SG_2[1], cys_bond)
+                        if overlap:
+                            if SG_1[0] != SG_2[0]:
                                 print('Overlap between {} and {}'.format(SG_1[0], SG_2[0]))
                                 cysbond_list.append(str(SG_1[0]) + '-' + str(SG_2[0]))
         cysbond_list = list(set(cysbond_list))
@@ -430,7 +440,11 @@ class Run(object):
                         'SPHERE'    :   '{:.1f}'.format(self.radius),
                         'SOLVENT'   :   '1 HOH'
                        }
-    
+
+        if self.forcefield == 'openFF':
+            replacements['FF_LIB'] = s.FF_DIR + '/AMBER14sb.lib'
+            replacements['FF_PRM'] = s.FF_DIR + '/AMBER14sb.prm'
+
         with open (s.INPUT_DIR + '/qprep_protprep.inp') as infile, \
             open ('qprep.inp', 'w') as outfile:
             for line in infile:
@@ -443,7 +457,8 @@ class Run(object):
                         outfile.write(outline)            
         
     def run_qprep(self):
-        qprep = s.Q_DIR[self.preplocation] + 'qprep'
+        cluster_options = getattr(s, self.preplocation)
+        qprep = cluster_options['QPREP']
         options = ' < qprep.inp > qprep.out'
         # Somehow Q is very annoying with this < > input style so had to implement
         # another function that just calls os.system instead of using the preferred
@@ -456,6 +471,11 @@ class Run(object):
                  'SOL': ['OW1', 'HW1', 'HW2'] 
                 }
         waters_tokeep = []
+        
+        with open('qprep.out') as infile:
+            for line in infile:
+                if 'ERROR' in line:
+                    sys.exit('>>> ERROR in Qprep')
         
         with open('top_p.pdb') as infile:
             for line in infile:
@@ -534,7 +554,7 @@ class Run(object):
             outfile.write('{:10}{:10}{:10}{:10}\n'.format('Q_RESN', 'PDB_IN', 'CHAIN','RESNAME'))
             for chain in self.PDB:
                 for key in self.PDB[chain]:
-                    if self.PDB[chain][key][2].strip() == 'CB':
+                    if self.PDB[chain][key][2].strip() == 'CA':
                         PDB_resi = self.PDB[chain][key][6]
                         Q_resi = self.log['QRESN'][chain][PDB_resi]
                         resn = self.PDB[chain][key][4]
@@ -596,6 +616,12 @@ if __name__ == "__main__":
                         default = 'maestro',
                         choices = ['maestro', 'gromacs'],
                         help = "Use this flag to specficy with which program the .pdb file was written")
+
+    parser.add_argument('-f', '--forcefield',
+                        dest = "forcefield",
+                        default = 'OPLS2015',
+                        choices = ['OPLS2015', 'openFF'],
+                        help = "Use this flag to specficy with which forcefield library to use.")
     
     args = parser.parse_args()
     run = Run(prot = args.prot,
@@ -605,7 +631,8 @@ if __name__ == "__main__":
               noclean = args.noclean,
               preplocation = args.preplocation,
               origin = args.origin,
-              include = ('ATOM','HETATM')
+              include = ('ATOM','HETATM'),
+              forcefield = args.forcefield
              )
     
     run.get_center_coordinates()        # 00
