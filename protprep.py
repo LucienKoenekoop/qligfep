@@ -58,7 +58,7 @@ class Run(object):
                     line = IO.pdb_parse_in(line)
                     if center[0] == 'RESN':
                         if line[6] == int(center[1]) \
-                        and line[2].strip() == 'CB':
+                        and (line[2].strip() == 'CB' or line[2].strip() == 'HA3'):
                             self.center = [float(line[8]),
                                            float(line[9]), 
                                            float(line[10])
@@ -430,7 +430,11 @@ class Run(object):
                     outline = IO.pdb_parse_out(self.PDB[chain][atom]) + '\n'
                     outfile.write(outline)
                 if len(self.PDB) != 1:
-                    outfile.write('GAP\n')
+#                    outfile.write('GAP\n')
+                    if chain == list(self.PDB)[-1]:
+                        outfile.write('END')
+                    else:
+                        outfile.write('TER\n')
         
     def write_qprep(self):
         replacements = {'FF_LIB'    :   s.FF_DIR + '/OPLS2015.lib',
@@ -444,6 +448,15 @@ class Run(object):
         if self.forcefield == 'openFF':
             replacements['FF_LIB'] = s.FF_DIR + '/AMBER14sb.lib'
             replacements['FF_PRM'] = s.FF_DIR + '/AMBER14sb.prm'
+
+        if self.forcefield == 'GTPase':
+            replacements['FF_LIB'] = s.FF_DIR + '/OPLS2015_GTPase.lib'
+            replacements['FF_PRM'] = s.FF_DIR + '/OPLS2015_GTPase.prm'
+        
+        if self.forcefield == 'pymemdyn':
+            replacements['FF_LIB'] = s.FF_DIR + '/OPLS2015_pymemdyn.lib'
+            replacements['FF_PRM'] = s.FF_DIR + '/OPLS2015.prm'        
+
 
         with open (s.INPUT_DIR + '/qprep_protprep.inp') as infile, \
             open ('qprep.inp', 'w') as outfile:
@@ -620,7 +633,7 @@ if __name__ == "__main__":
     parser.add_argument('-f', '--forcefield',
                         dest = "forcefield",
                         default = 'OPLS2015',
-                        choices = ['OPLS2015', 'openFF'],
+                        choices = ['OPLS2015', 'openFF', 'GTPase', 'pymemdyn'],
                         help = "Use this flag to specficy with which forcefield library to use.")
     
     args = parser.parse_args()

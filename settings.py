@@ -15,17 +15,40 @@ SCHROD_DIR = '/home/apps/apps/schrodinger2020-3/'
 # CLUSTER INPUTS. To add your own cluster, use the same input as below
 CSB = {'NODES'        : '1',
        'NTASKS'       : '8',
-       'TIME'         : '0-12:00:00',  # d-hh:mm:ss
+       'TIME'         : '0-08:00:00',  # d-hh:mm:ss
+       'PARTITION'    : 'CLUSTER-AMD',
        'MODULES'      : '\n',
-       'QDYN'         : 'qdyn=' + Q_DIR['CSB'] + 'qdynp5p',
+       'QDYN'         : 'qdyn=' + Q_DIR['CSB'] + 'qdyn5p',
        'QPREP'        : Q_DIR['CSB'] + 'qprep5',
        'QFEP'         : Q_DIR['CSB'] + 'qfep5',
        'QCALC'        : Q_DIR['CSB'] + 'qcalc5'
       }
 
+TETRA  = {'NODES'      : '1',
+          'NTASKS'     : '8',
+          'TIME'       : '2-00:00:00',  # d-hh:mm:ss
+          'PARTITION'  : 'tetralith',
+          'MODULES'    : '\n', # Add a \n for every added module
+          'QDYN'       : 'qdyn=qdyn5p', #fix qdyn= !!!!!
+          'QPREP'      : 'qprep', # NOTE: change to where you are setting up, not where you are running!
+          'QFEP'       : 'qfep5',
+          'ACCOUNT'    : 'naiss2023-3-5'
+        }
+
+DARDEL = {'NODES'      : '1',
+          'NTASKS'     : '8',
+          'TIME'       : '2-00:00:00',  # d-hh:mm:ss
+          'PARTITION'  : 'shared',
+          'MODULES'    : '\n', # Add a \n for every added module
+          'QDYN'       : 'qdyn=qdyn5p', #fix qdyn= !!!!!
+          'QPREP'      : 'qprep', # NOTE: change to where you are setting up, not where you are running!
+          'QFEP'       : 'qfep5',
+          'ACCOUNT'    : 'naiss2023-3-5'
+        }
+
 KEBNE = {'NODES'      : '1',
          'NTASKS'     : '8',
-         'TIME'       : '0-12:00:00',  # d-hh:mm:ss
+         'TIME'       : '0-24:00:00',  # d-hh:mm:ss
          'MODULES'    : '\n', # Add a \n for every added module
          'QDYN'       : 'qdyn=qdyn5p', #fix qdyn= !!!!!
          'QPREP'      : 'qprep5', # NOTE: change to where you are setting up, not where you are running!
@@ -36,25 +59,16 @@ KEBNE = {'NODES'      : '1',
 
 RACKHAM = {'NODES'      : '1',
            'NTASKS'     : '10',
-           'TIME'       : '0-12:00:00',  # d-hh:mm:ss
+           'TIME'       : '0-10:00:00',  # d-hh:mm:ss
            'MODULES'    : '\n', # Add a \n for every added module
            'QDYN'       : 'qdyn=qdyn5p', #fix qdyn= !!!!!
            'QPREP'      : 'qprep5', # NOTE: change to where you are setting up, not where you are running!
            'QFEP'       : 'qfep5',
-           'QCALC'      : 'qcalc5',           
+           'QCALC'      : 'qcalc5',
            'ACCOUNT'    : 'SNIC2021-3-1'
           }
 
-TETRA  = {'NODES'      : '1',
-          'NTASKS'     : '8',
-          'TIME'       : '0-12:00:00',  # d-hh:mm:ss
-          'MODULES'    : '\n', # Add a \n for every added module
-          'QDYN'       : 'qdyn=qdyn5p', #fix qdyn= !!!!!
-          'QPREP'      : 'qprep5', # NOTE: change to where you are setting up, not where you are running!
-          'QFEP'       : 'qfep5',
-          'QCALC'      : 'qcalc5',           
-          'ACCOUNT'    : 'SNIC2021-3-1'
-         }
+
 
 LOCAL = {'NODES'      : '',
          'NTASKS'     : '',
@@ -63,6 +77,6 @@ LOCAL = {'NODES'      : '',
          'QDYN'       : 'qdyn=qdyn5p', #fix qdyn= !!!!!
          'QPREP'      : 'qprep5', # NOTE: change to where you are setting up, not where you are running!
          'QFEP'       : 'qfep5',
-         'QCALC'      : 'qcalc5',                 
+         'QCALC'      : 'qcalc5',           
          'ACCOUNT'    : ''
         }

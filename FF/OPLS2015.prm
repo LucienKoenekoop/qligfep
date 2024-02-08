@@ -7,7 +7,7 @@
 *Parameters translated for Q with charmm_Q_par.py (Geir V. Isaksen, 2015)
 *________________________________________________
 [options]
-name        OPLS-AA/M 2015
+*name        OPLS-AA/M 2015
 vdw_rule    geometric   ! vdW combination rule (geometric or arithmetic )
 scale_14         0.5         ! electrostatic 1-4 scaling factor
 switch_atoms  on       ! on = use switch atom; off = use charge group
@@ -99,6 +99,7 @@ HT         0.000      0.000     0.000      0.000     0.00        1.0080 1
 SOD     1036.9613  1036.9613    6.8099   733.2424    4.8153     22.9898 1  
 CLA     7112.3885  7112.3885  109.4806  5029.2181   77.4145     35.4500 1  
 ZN        53.50       0.00      7.19      37.83      5.09       65.38   !ZN2+ from Hugo-QOPLSAA2001.prm
+DUM        0.0000     0.0000    0.0000     0.0000    0.0000     6.0000
 
 !popc
 LC      1802.25 1802.25 34.18 1274.38   24.17   12.01

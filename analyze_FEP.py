@@ -21,13 +21,15 @@ except:
 class Run(object):
     """
     """
-    def __init__(self, FEP, color, PDB, cluster, *args, **kwargs):
+    def __init__(self, FEP, color, PDB, cluster, esc, *args, **kwargs):
+        self.esc = esc
         self.cluster=cluster
         self.FEP = FEP.strip('/')
         self.energies = {}
         self.FEPstages = []
         FEPfiles = glob.glob(self.FEP + '/inputfiles/FEP*.fep')
         inputs = glob.glob(self.FEP + '/inputfiles/md*.inp')
+        inputs = [x for x in inputs if not '_F.inp' in x]
         FEPfiles.sort()
         self.failed = []
         for FEPfile in FEPfiles:
@@ -60,7 +62,7 @@ class Run(object):
         results = {}
         out = []
         
-        FEPs = sorted(glob.glob(self.FEP + '/*/*/*/qfep.out'))
+        FEPs = sorted(glob.glob(self.FEP + '/FEP*/*/*/qfep.out'))
         for filename in FEPs:
             i = -1
             file_parse = filename.split('/')
@@ -69,7 +71,10 @@ class Run(object):
             replicate = file_parse[3]
             
             try:
-                energies = IO.read_qfep(filename)
+                if self.esc:
+                    energies = IO.read_qfep_esc(filename)
+                else:
+                    energies = IO.read_qfep(filename)
             except:
                 print("Could not retrieve energies for: " + filename)
                 energies = [np.nan, np.nan, np.nan, np.nan, np.nan]
@@ -241,21 +246,26 @@ if __name__ == "__main__":
                         dest = "cluster",
                         required = False,
                         help = "cluster information")
+    parser.add_argument('-esc', '--end-state-catastrophe',
+                        dest = "esc",
+                        required = False,
+                        help = "Add this argument in case you have singularities in the final lambda windows resulting in only nan values")
     
     
     args = parser.parse_args()
     run = Run(FEP = args.FEP,
               color = args.color,
               cluster = args.cluster,
-              PDB = args.PDB
+              PDB = args.PDB,
+              esc = args.esc
              )
     
     run.create_environment()
     run.read_FEPs()
     run.read_mdlog()
     
-    if plot == True:
-        run.plot_data()
+#    if plot == True:
+#        run.plot_data()
         
     if args.PDB == True:
         run.write_re2pdb()
