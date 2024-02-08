@@ -48,7 +48,7 @@ class Run(object):
         self.PDB2Q          = {}
         self.PDB            = {}
         self.systemsize     = 0
-#        self.convergence    = False
+        self.convergence    = False
 
         
         # Add cofactors to list for further pdb/prm parsing
@@ -60,7 +60,7 @@ class Run(object):
             self.radius = radius
         if time == 'conv':
             self.time = 101
-#            self.convergence = True
+            self.convergence = True
         else:
             self.time = int(time) + 1
     
@@ -70,8 +70,8 @@ class Run(object):
             os.makedirs(self.directory)
             os.makedirs(self.directory + '/inputfiles')
             
-        files = {self.directory + '/inputfiles/' + self.forcefield + '.lib': \
-                 s.FF_DIR + '/' + self.forcefield + '.lib',
+        files = {self.directory + '/inputfiles/' + self.forcefield + '_pymemdyn.lib': \
+                 s.FF_DIR + '/' + self.forcefield + '_pymemdyn.lib',
                 }
         
         if self.cofactor[0] != None:
@@ -215,6 +215,7 @@ class Run(object):
                         outfile.write(IO.pdb_parse_out(water) + '\n')                    
                     
     def write_qprep(self):
+#        replacements = {'PRM':s.FF_DIR+'/'+self.forcefield+'.prm', #self.prm_merged,
         replacements = {'PRM':self.prm_merged,
                         'PDB':self.PDBout,
                         'CENTER':'{} {} {}'.format(*self.sphere),
@@ -231,7 +232,7 @@ class Run(object):
         
         src = s.INPUT_DIR + '/qprep_resFEP.inp'
         self.qprep = self.directory + '/inputfiles/qprep.inp'
-        libraries = [self.forcefield + '.lib']
+        libraries = [self.forcefield + '_pymemdyn.lib']
         if self.cofactor[0] != None:
             for filename in self.cofactor:
                 libraries.append(filename + '.lib')
@@ -254,7 +255,7 @@ class Run(object):
                 
     def run_qprep(self):
         os.chdir(self.directory + '/inputfiles/')
-        qprep = s.Q_DIR[self.preplocation] + 'qprep' # use either qprep / Qprep6
+        qprep = s.Q_DIR[self.preplocation] + 'qprep5' # use either qprep / Qprep6
         options = ' < qprep.inp > qprep.out'         # based on Q version to use
         # Somehow Q is very annoying with this < > input style so had to implement
         # another function that just calls os.system instead of using the preferred
@@ -339,13 +340,13 @@ class Run(object):
                                                        file_base)
                         outfile.write(outline)     
                         
-#                        if self.convergence == True:
-#                            if i > 8:
-#                                outfile.write('convergence=$(python $check -L $workdir -r $run)\n')
-#                                outfile.write('echo $convergence\n')
-#                                outfile.write('if [ $convergence -eq 1 ]; then\n')
-#                                outfile.write('    break\n')
-#                                outfile.write('fi\n')
+                        if self.convergence == True:
+                            if i > 8:
+                                outfile.write('convergence=$(python $check -L $workdir -r $run)\n')
+                                outfile.write('echo $convergence\n')
+                                outfile.write('if [ $convergence -eq 1 ]; then\n')
+                                outfile.write('    break\n')
+                                outfile.write('fi\n')
 
     def write_submitfile(self):
         IO.write_submitfile(self.directory, self.replacements)                        
@@ -413,7 +414,7 @@ if __name__ == "__main__":
     parser.add_argument('-f', '--forcefield',
                         dest = "forcefield",
                         required = True,
-                        choices = ['OPLS2015', 'OPLS2005'],
+                        choices = ['OPLS2015', 'OPLS2005', 'OPLS2015_GTPase'],
                         help = "Forcefield to use.")
     
     parser.add_argument('-S', '--system',

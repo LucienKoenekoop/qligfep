@@ -114,7 +114,10 @@ class Run(object):
             self.nonAA = True
 
         mutation = '{}{}{}'.format(*self.mutation)
-        FEPdir = s.FF_DIR + '/.FEP/' + self.forcefield +  '/' + AA_from + '_' + AA_to
+        if self.forcefield == 'OPLS2015_GTPase':
+            FEPdir = s.FF_DIR + '/.FEP/OPLS2015/' + AA_from + '_' + AA_to
+        else:
+            FEPdir = s.FF_DIR + '/.FEP/' + self.forcefield +  '/' + AA_from + '_' + AA_to
             
         if self.dual == True:
             print('Generating dual topology inputfiles')
@@ -506,6 +509,12 @@ class Run(object):
         os.chdir('../../')
         
     def merge_prm(self):
+        if self.forcefield == 'OPLS2015_GTPase':
+            self.prm_merged = s.FF_DIR + '/' + self.forcefield + '.prm'
+            prm_merged = self.directory + '/inputfiles/' + self.forcefield + '.prm'
+            shutil.copyfile(self.prm_merged, prm_merged)
+            return
+        
         headers =['[options]', 
                   '[atom_types]',
                   '[bonds]',
@@ -521,7 +530,7 @@ class Run(object):
                 
         if self.nonAA == True:
             prmfiles.append(self.mutation[2] + '.prm')
-            
+
         prms = IO.read_prm(prmfiles)
         prm_merged = self.directory + '/inputfiles/' + self.forcefield + '_merged.prm'
         self.prm_merged = self.forcefield + '_merged.prm'
@@ -583,11 +592,18 @@ class Run(object):
                             outfile.write(IO.pdb_parse_out(water) + '\n')
 
     def write_qprep(self):
-        replacements = {'PRM':self.prm_merged,
-                        'PDB':self.PDBout,
-                        'CENTER':'{} {} {}'.format(*self.sphere),
-                        'SPHERE':self.radius,
-                       }
+        if self.forcefield == 'OPLS2015_GTPase':
+            replacements = {'PRM':self.forcefield + '.prm',
+                            'PDB':self.PDBout,
+                            'CENTER':'{} {} {}'.format(*self.sphere),
+                            'SPHERE':self.radius,
+               }
+        else:
+            replacements = {'PRM':self.prm_merged,
+                            'PDB':self.PDBout,
+                            'CENTER':'{} {} {}'.format(*self.sphere),
+                            'SPHERE':self.radius,
+                           }
         if self.system == 'protein':
             replacements['SOLVENT'] = '4 water.pdb'
             
@@ -637,7 +653,7 @@ class Run(object):
         self.lambdas = IO.get_lambdas(self.windows, self.sampling)
 
     def write_EQ(self):
-        for line in self.PDB[int(self.PDB2Q[self.chain][self.mutation[1]])]:
+        for line in self.PDB[int(self.PDB2Q[self.chain][str(self.mutation[1])])]:
             if line[2] == 'CA' and self.system == 'water'              \
             or line[2] == 'CA' and self.system == 'vacuum':             \
                 self.replacements['WATER_RESTRAINT'] = '{} {} 1.0 0 0'.format(line[1], 
@@ -1094,7 +1110,7 @@ if __name__ == "__main__":
     parser.add_argument('-f', '--forcefield',
                         dest = "forcefield",
                         required = True,
-                        choices = ['OPLS2015', 'OPLS2005', 'SIDECHAIN', 'AMBER14sb','CHARMM36'],
+                        choices = ['OPLS2015', 'OPLS2005', 'OPLS2015_GTPase', 'SIDECHAIN', 'AMBER14sb','CHARMM36'],
                         help = "Forcefield to use.")
     
     parser.add_argument('-s', '--sampling',
